@@ -1,0 +1,4 @@
+.workbuddy/
+deploy/
+fetch_hk_data.py
+gen_smic_data.py
