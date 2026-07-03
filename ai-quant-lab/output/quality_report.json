@@ -1,0 +1,77 @@
+{
+  "report_date": "2026-07-02",
+  "spec_version": "2.0",
+  "stocks": {
+    "688981.SH": {
+      "name": "中芯国际",
+      "market": "A股",
+      "record_count": 237,
+      "date_range": {
+        "start": "20260702",
+        "end": "20250702"
+      },
+      "completeness": "PASS",
+      "price_range": {
+        "min": 85.48,
+        "max": 158.82,
+        "avg": 115.03
+      },
+      "gap_detection": {
+        "count": 2,
+        "details": [
+          {
+            "date": "20250828",
+            "pct": 17.45
+          },
+          {
+            "date": "20260525",
+            "pct": 18.78
+          }
+        ]
+      }
+    },
+    "002594.SZ": {
+      "name": "比亚迪",
+      "market": "A股",
+      "record_count": 243,
+      "date_range": {
+        "start": "20260702",
+        "end": "20250702"
+      },
+      "completeness": "PASS",
+      "price_range": {
+        "min": 78.2,
+        "max": 342.72,
+        "avg": 117.09
+      },
+      "gap_detection": {
+        "count": 1,
+        "details": [
+          {
+            "date": "20250729",
+            "pct": 66.94
+          }
+        ]
+      }
+    },
+    "600900.SH": {
+      "name": "长江电力",
+      "market": "A股",
+      "record_count": 243,
+      "date_range": {
+        "start": "20260702",
+        "end": "20250702"
+      },
+      "completeness": "PASS",
+      "price_range": {
+        "min": 25.65,
+        "max": 30.61,
+        "avg": 27.59
+      },
+      "gap_detection": {
+        "count": 0,
+        "details": []
+      }
+    }
+  }
+}

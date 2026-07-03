@@ -1,0 +1,258 @@
+{
+  "spec_name": "Stock_Data_Spec_个股取数规范 v2.0",
+  "spec_version": "2.0",
+  "created": "2026-07-02",
+  "updated": "2026-07-02",
+  "description": "本规范定义三只典型股票（中芯国际、比亚迪、长江电力）的结构化取数规则，覆盖A股+港股跨市场数据源。A股通过Tushare API，港股通过yfinance。包含数据源配置、数据类型定义、复权说明、输出格式、执行流程和质量要求。",
+
+  "project": {
+    "name": "task2-典型股票数据分析",
+    "purpose": "建立规范化取数流程，获取三只代表性上市公司跨市场行情数据",
+    "output_base_dir": "./task2/output/"
+  },
+
+  "data_sources": {
+    "a_share": {
+      "name": "TuShare Pro",
+      "type": "API / MCP",
+      "daily_api": "pro.daily() / mcp__tushareMcp__get_daily_data",
+      "basic_api": "pro.daily_basic() / mcp__tushareMcp__get_daily_basic",
+      "code_format": "688981.SH（6位代码+市场后缀）",
+      "notes": "需Token认证，免费版有权限限制"
+    },
+    "hk_stock": {
+      "name": "Yahoo Finance (yfinance)",
+      "type": "Python包",
+      "daily_api": "yf.download(ticker)",
+      "code_format": "0981.HK（港股代码+.HK）",
+      "notes": "免费、稳定、无需Token；受Python环境SSL证书影响需配置"
+    }
+  },
+
+  "adjustment_policy": {
+    "a_share": {
+      "data_type": "未复权数据",
+      "issue": "遇除权除息日会出现价格跳空（如比亚迪2025年7月附近明显跳空）",
+      "description": "未复权价格为实际成交价，是真实交易价格，但受分红送转等事件影响，价格会在除权除息日突然跳空，导致K线图中出现不连续的价格缺口。",
+      "recommendation": "进行技术分析（K线形态、MACD等）时应使用后复权数据；进行价差套利时可使用未复权数据。当前Spec默认使用未复权数据，分析时需注意除权除息节点。",
+      "adjustment_types": {
+        "前复权": "调整历史价格，使除权除息前的价格可对比，常用于技术分析",
+        "后复权": "调整当前价格，使价格保持真实连续，常用于长期走势分析",
+        "不复权": "真实成交价，存在跳空缺口"
+      }
+    },
+    "hk_stock": {
+      "data_type": "yfinance默认返回调整收盘价(Adjusted Close)",
+      "issue": "yfinance默认对港股返回已调整收盘价(Adj Close)，包含了拆股和股息调整",
+      "note": "yfinance 使用 `Auto-adjust` 参数控制是否自动调整价格"
+    }
+  },
+
+  "target_stocks": {
+    "a_share": [
+      {
+        "ts_code": "688981.SH",
+        "name": "中芯国际",
+        "short_name": "SMIC",
+        "exchange": "SSE 科创板",
+        "industry": "半导体",
+        "list_date": "2020-07-16",
+        "hk_counterpart": "0981.HK"
+      },
+      {
+        "ts_code": "002594.SZ",
+        "name": "比亚迪",
+        "short_name": "BYD",
+        "exchange": "SZSE 主板",
+        "industry": "汽车整车",
+        "list_date": "2011-06-30",
+        "hk_counterpart": "1211.HK"
+      },
+      {
+        "ts_code": "600900.SH",
+        "name": "长江电力",
+        "short_name": "YGP",
+        "exchange": "SSE 主板",
+        "industry": "水力发电",
+        "list_date": "2003-11-18",
+        "hk_counterpart": null
+      }
+    ],
+    "hk_stock": [
+      {
+        "yf_code": "0981.HK",
+        "ts_code": "00981.HK",
+        "name": "中芯国际",
+        "short_name": "SMIC-H",
+        "industry": "半导体",
+        "a_counterpart": "688981.SH"
+      },
+      {
+        "yf_code": "1211.HK",
+        "ts_code": "01211.HK",
+        "name": "比亚迪股份",
+        "short_name": "BYD-H",
+        "industry": "汽车整车",
+        "a_counterpart": "002594.SZ"
+      }
+    ]
+  },
+
+  "data_types": {
+    "a_daily_kline": {
+      "name": "A股日线行情",
+      "source": "TuShare Pro",
+      "tool": "mcp__tushareMcp__get_daily_data",
+      "api_example": "pro.daily(ts_code='688981.SH', start_date='20250702', end_date='20260702')",
+      "required_params": {
+        "ts_code": "股票代码，如 688981.SH",
+        "start_date": "起始日期 YYYYMMDD",
+        "end_date": "结束日期 YYYYMMDD"
+      },
+      "fields": [
+        {"name": "trade_date", "type": "string", "format": "YYYYMMDD", "desc": "交易日"},
+        {"name": "open", "type": "number", "desc": "开盘价"},
+        {"name": "high", "type": "number", "desc": "最高价"},
+        {"name": "low", "type": "number", "desc": "最低价"},
+        {"name": "close", "type": "number", "desc": "收盘价（未复权）"},
+        {"name": "vol", "type": "number", "unit": "手", "desc": "成交量（1手=100股）"},
+        {"name": "amount", "type": "number", "unit": "元", "desc": "成交额"},
+        {"name": "change", "type": "number", "desc": "涨跌额"},
+        {"name": "pct_chg", "type": "number", "unit": "%", "desc": "涨跌幅"}
+      ]
+    },
+    "hk_daily_kline": {
+      "name": "港股日线行情",
+      "source": "Yahoo Finance (yfinance)",
+      "tool": "yfinance",
+      "api_example": "yf.download('0981.HK', start='2025-07-02', end='2026-07-02')",
+      "fields": [
+        {"name": "Date", "type": "datetime", "desc": "交易日"},
+        {"name": "Open", "type": "number", "currency": "HKD", "desc": "开盘价"},
+        {"name": "High", "type": "number", "currency": "HKD", "desc": "最高价"},
+        {"name": "Low", "type": "number", "currency": "HKD", "desc": "最低价"},
+        {"name": "Close", "type": "number", "currency": "HKD", "desc": "收盘价"},
+        {"name": "Adj Close", "type": "number", "currency": "HKD", "desc": "调整收盘价（含拆股股息调整）"},
+        {"name": "Volume", "type": "number", "desc": "成交量"}
+      ]
+    },
+    "a_daily_basic": {
+      "name": "A股每日基本面指标",
+      "source": "TuShare Pro",
+      "required_permission": "Pro权限",
+      "fields": [
+        {"name": "pe_ttm", "type": "number", "desc": "市盈率(TTM)"},
+        {"name": "pb", "type": "number", "desc": "市净率"},
+        {"name": "ps", "type": "number", "desc": "市销率"},
+        {"name": "total_mv", "type": "number", "unit": "元", "desc": "总市值"},
+        {"name": "circ_mv", "type": "number", "unit": "元", "desc": "流通市值"},
+        {"name": "turnover_rate", "type": "number", "unit": "%", "desc": "换手率"}
+      ]
+    }
+  },
+
+  "data_pipeline": {
+    "default_time_range": {
+      "daily": {"period": "近1年", "start": "-365d"},
+      "weekly": {"period": "近3年", "start": "-1095d"},
+      "monthly": {"period": "近5年", "start": "-1825d"}
+    },
+    "execution_steps": [
+      {"step": 1, "phase": "A股-日线行情", "action": "依次查询3只A股日线数据", "source": "TuShare MCP"},
+      {"step": 2, "phase": "港股-日线行情", "action": "依次查询2只港股日线数据", "source": "yfinance"},
+      {"step": 3, "phase": "A股-基本面指标", "action": "查询3只A股每日基本面(PE/PB等)", "source": "TuShare MCP"},
+      {"step": 4, "phase": "数据质量检查", "action": "检查完整性/一致性/跳空/异常值", "source": "Python脚本"},
+      {"step": 5, "phase": "统一数据包", "action": "合并所有数据为JSON数据包", "source": "Python脚本"},
+      {"step": 6, "phase": "数据可视化", "action": "生成ECharts对比看板(overview_comparison.html)", "source": "HTML模板"}
+    ]
+  },
+
+  "output_formats": {
+    "csv": {
+      "encoding": "utf-8-sig",
+      "delimiter": ",",
+      "header": true,
+      "naming": "{ts_code}_daily.csv（如 688981_SH_daily.csv）"
+    },
+    "json": {
+      "encoding": "utf-8",
+      "indent": 2,
+      "naming": "stock_data_package.json"
+    },
+    "quality_report": {
+      "format": "json + html",
+      "naming": "quality_report.json",
+      "content": ["数据完整性", "缺失值统计", "价格跳空检测", "异常值标记"]
+    },
+    "visualization": {
+      "format": "html",
+      "naming": "overview_comparison.html",
+      "content": "ECharts交互式个股对比看板（收盘价走势、涨跌幅对比、成交量对比、估值指标对比）"
+    }
+  },
+
+  "quality_checks": {
+    "completeness": {
+      "description": "检查数据天数是否接近预期",
+      "a_share_rule": "近1年≥220个交易日",
+      "hk_share_rule": "近1年≥240个交易日（港股交易日更多）"
+    },
+    "price_consistency": {
+      "description": "检查OHLC逻辑关系",
+      "rules": ["high >= max(open,close)", "low <= min(open,close)", "vol >= 0", "date递增无重复"]
+    },
+    "gap_detection": {
+      "description": "检测价格跳空（可能因除权除息导致）",
+      "rule": "单日涨跌幅超过±15%标记为异常跳空",
+      "note": "除权除息导致的跳空为正常现象，需与数据错误区分。如比亚迪2025年7月的价格跳空即因除权除息引起。"
+    },
+    "missing_data": {
+      "description": "缺失值处理",
+      "rules": [
+        "停牌日保留空行，标记'suspended'",
+        "财务指标缺失填null",
+        "连续缺失>5日标记警告"
+      ]
+    }
+  },
+
+  "known_issues": [
+    {
+      "stock": "比亚迪(002594.SZ)",
+      "issue": "未复权数据中的除权除息跳空",
+      "detail": "2025年7月附近出现明显价格跳空，这是因为未复权数据在除权除息日调整价格所致，属正常现象。使用前复权数据可消除此跳空。",
+      "impact": "K线图会出现价格不连续，但不影响收益率计算"
+    },
+    {
+      "stock": "港股(0981.HK/1211.HK)",
+      "issue": "yfinance SSL证书问题",
+      "detail": "在Python 3.13环境下，yfinance可能因SSL证书问题无法连接。解决方案：使用`pip install certifi`或在代码中禁用SSL验证。",
+      "workaround": "参考：yfinance已内置回退机制，通常无需额外配置"
+    },
+    {
+      "stock": "中芯国际(688981.SH)",
+      "issue": "2020年7月上市，历史数据较短",
+      "detail": "科创板上市时间较短，回测窗口受限。港股00981.HK上市时间更早（2004年），可作为历史分析的补充",
+      "impact": "A股最早数据从2020-07-16开始"
+    }
+  ],
+
+  "cross_market_comparison": {
+    "a_hk_premium": {
+      "description": "A股相对港股的溢价/折价率",
+      "formula": "溢价率 = (A股价格 - 港股价格 × 汇率) / (港股价格 × 汇率) × 100%",
+      "note": "中芯国际和比亚迪均有A+H股，可通过溢价率判断跨市场价差"
+    },
+    "currency": {
+      "a_share": "CNY（人民币）",
+      "hk_stock": "HKD（港元）",
+      "conversion": "需使用当日人民币兑港币汇率折算"
+    }
+  },
+
+  "skill_reuse": {
+    "skill_name": "stock-data-fetcher",
+    "description": "该取数流程已沉淀为WorkBuddy技能'stock-data-fetcher'，后续类似取数任务可一键复用",
+    "location": "~/.workbuddy/skills/stock-data-fetcher/"
+  }
+}
